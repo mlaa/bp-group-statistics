@@ -43,7 +43,7 @@ function bp_group_statistics_admin_display() {
 //$members = $members_array['members']; 
 
 	global $wpdb; 
-	$results = $wpdb->get_results( 'select t1.group_id as source, t2.group_id as target, count(t1.user_id) as strength from wp_bp_groups_members as t1, wp_bp_groups_members as t2 where t1.group_id < t2.group_id and t1.user_id = t2.user_id group by source, target order by strength desc limit 40' ); 
+	$results = $wpdb->get_results( 'select t1.group_id as source, t2.group_id as target, count(t1.user_id) as strength from wp_bp_groups_members as t1, wp_bp_groups_members as t2 where t1.group_id < t2.group_id and t1.user_id = t2.user_id group by source, target order by strength desc limit 400' ); 
 
 	_log( 'here come some groups!' ); 
 	//_log( $results ); 
@@ -108,8 +108,8 @@ function bp_group_statistics_admin_display() {
 	    console.log('here comes the data!'); 
 	    console.dir(mydata); 
             
-            var width = 400,
-                height = 400;
+            var width = 600,
+                height = 600;
             
             var svg = d3.select('#d3container')
               .append('svg')
@@ -122,6 +122,7 @@ function bp_group_statistics_admin_display() {
               .enter()
               .append("circle")
                 .attr("class", "node")
+		.style("fill", "red")
                 .attr("r", 12);
             
             // draw the graph edges
@@ -132,8 +133,8 @@ function bp_group_statistics_admin_display() {
             
             // create the layout
             var force = d3.layout.force()
-                .charge(-120)
-                .linkDistance(40)
+                .charge(-220)
+                .linkDistance(80)
                 .size([width, height])
                 .nodes(mydata.nodes)
                 .links(mydata.links)
