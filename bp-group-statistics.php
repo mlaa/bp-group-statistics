@@ -129,7 +129,8 @@ function bp_group_statistics_admin_display() {
             var link = svg.selectAll("line.link")
               .data(mydata.links)
               .enter().append("line")
-                .style('stroke','black');
+              .style('stroke','black')
+	      .style("stroke-width", function(d) { return ( d.strength / 100 ); }); 
             
             // create the layout
             var force = d3.layout.force()
