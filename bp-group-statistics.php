@@ -43,11 +43,35 @@ function bp_group_statistics_admin_display() {
 //$members = $members_array['members']; 
 
 	global $wpdb; 
-	$results = $wpdb->get_results( 'select t1.group_id as G1, t2.group_id as G2, count(t1.user_id) as Strength from wp_bp_groups_members as t1, wp_bp_groups_members as t2 where t1.group_id < t2.group_id and t1.user_id = t2.user_id group by G1, G2 order by Strength desc' ); 
+	$results = $wpdb->get_results( 'select t1.group_id as source, t2.group_id as target, count(t1.user_id) as strength from wp_bp_groups_members as t1, wp_bp_groups_members as t2 where t1.group_id < t2.group_id and t1.user_id = t2.user_id group by source, target order by strength desc limit 40' ); 
 
 	_log( 'here come some groups!' ); 
 	//_log( $results ); 
-	_log( json_encode($results) ); 
+	_log( $results ); 
+	$linked_groups = array(); 
+	foreach( $results as $result ) { 
+		if ( $result->strength > 2 ) { 
+			$linked_groups[] = $result->source; 
+			$linked_groups[] = $result->target; 
+		} 
+	} 
+	_log( 'here are the linked groups raw:' ); 
+	_log( $linked_groups ); 
+	$linked_groups_unique = array_unique($linked_groups); 
+	// now reindex it
+	$linked_groups_unique = array_values($linked_groups_unique); 
+	_log( 'here are the linked groups uniquej:' ); 
+	_log( $linked_groups_unique ); 
+	$nodes = array(); 
+	foreach( $linked_groups_unique as $linked_group ) { 
+		$nodes[] = array( 'name' => $linked_group ); 
+	} 
+	foreach( $results as $result ) { 
+		$result->source = array_search( $result->source, $linked_groups_unique ); 
+		$result->target = array_search( $result->target, $linked_groups_unique ); 
+	} 
+	echo '{ "links": ' . json_encode($results) . ', "nodes": ' . json_encode($nodes) . '}'; 
+
 ?> 
 	<pre> <?php 
 //print_r( $groups ); 
@@ -55,8 +79,10 @@ function bp_group_statistics_admin_display() {
 ?> </pre> 
 <div id="d3container"></div> 
     <script>
+		var mydata = <?php echo '{ "links": ' . json_encode($results) . ', "nodes": ' . json_encode($nodes) . '}'; ?>  
+
 		// test data. 
-		var mydata = <?php echo '{
+		var testdata = <?php echo '{
     "links": [
         {
 		"source": 0, 
