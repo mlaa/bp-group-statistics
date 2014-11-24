@@ -34,7 +34,8 @@ add_action( 'wp_enqueue_scripts', 'bp_group_statistics_enqueue_scripts' );
 function bp_group_statistics_admin_display() { 
 	// admin page
 ?>
-<h1>Helllooooooo!</h1> 
+<h1>Shared Membership in Groups</h1> 
+
 <?php 
 //$groups_array = groups_get_groups( array( 'per_page' => 10000 ) ); 
 //$groups = $groups_array['groups']; 
@@ -42,7 +43,7 @@ function bp_group_statistics_admin_display() {
 //$members = $members_array['members']; 
 
 	global $wpdb; 
-	$results = $wpdb->get_results( 'select t1.group_id as source, t2.group_id as target, count(t1.user_id) as strength from wp_bp_groups_members as t1, wp_bp_groups_members as t2 where t1.group_id < t2.group_id and t1.user_id = t2.user_id group by source, target order by strength desc limit 400' ); 
+	$results = $wpdb->get_results( 'select t1.group_id as source, t2.group_id as target, count(t1.user_id) as strength from wp_bp_groups_members as t1, wp_bp_groups_members as t2 where t1.group_id < t2.group_id and t1.user_id = t2.user_id group by source, target order by strength desc limit 100' ); 
 
 	//_log( 'here come some groups!' ); 
 	////_log( $results ); 
@@ -63,19 +64,49 @@ function bp_group_statistics_admin_display() {
 	//_log( $linked_groups_unique ); 
 	$nodes = array(); 
 	foreach( $linked_groups_unique as $linked_group ) { 
-		$group = groups_get_group( array( 'group_id' => $linked_group ) ); 
-		//_log('here comes the group!'); 
-		//_log($group); 
+		$group = groups_get_group( array( 
+			'group_id' => $linked_group, 
+			'load_users' => true, 
+			'populate_extras' => true
+		) ); 
+		_log( 'here comes the group!' ); 
+		_log( $group ); 
+		$mla_oid = groups_get_groupmeta( $linked_group, 'mla_oid' ); 
+		$mla_type_let = $mla_oid[0]; 
+		switch ( $mla_type_let ) { 
+			case 'D': 
+				$color = 'blue'; 
+				break; 
+			case 'M': 
+				$color = 'green'; 
+				break; 
+			case 'G': 
+				$color = 'red'; 
+				break; 
+			case 'F': 
+				$color = 'yellow'; 
+				break; 
+			default: 
+				$color = 'black'; 
+				break; 
+		} 
+		$members = $group->total_member_count; 
+		_log( 'here comes the group type!' ); 
+		_log( $mla_type_let ); 
+		_log( 'here comes the group membership data!' ); 
+		_log( $members ); 
 		$nodes[] = array( 
 			'name' => $linked_group, 
-			'label' => $group->name 
+			'label' => $group->name, 
+			'members' => $members, 
+			'color' => $color
 		); 
 	} 
 	foreach( $results as $result ) { 
 		$result->source = array_search( $result->source, $linked_groups_unique ); 
 		$result->target = array_search( $result->target, $linked_groups_unique ); 
 	} 
-	echo '{ "links": ' . json_encode($results) . ', "nodes": ' . json_encode($nodes) . '}'; 
+	//echo '{ "links": ' . json_encode($results) . ', "nodes": ' . json_encode($nodes) . '}'; 
 
 ?> 
 	<pre> <?php 
@@ -113,8 +144,8 @@ function bp_group_statistics_admin_display() {
 	    console.log('here comes the data!'); 
 	    console.dir(mydata); 
             
-            var width = 600,
-                height = 600;
+            var width = 1000,
+                height = 1000;
             
             var svg = d3.select('#d3container')
               .append('svg')
@@ -127,10 +158,16 @@ function bp_group_statistics_admin_display() {
 		    .append('g')
 		    .classed('gnode', true); 
 
+            // draw the graph edges
+            var link = svg.selectAll("line.link")
+              .data(mydata.links)
+              .enter().append("line")
+              .style('stroke','rgba(0,0,0,0.2)')
+	      .style("stroke-width", function(d) { return ( d.strength / 75 ); }); 
 	    var node = gnodes.append("circle")
 		    .attr("class", "node")
-		    .attr('r', 5)
-		    .style('fill', 'red'); 
+		    .attr('r', function(d) { return d.members / 50; }  )
+		    .style('fill', function(d) { return d.color } ); 
 
             // draw the graph nodes
 	    /*
@@ -144,19 +181,15 @@ function bp_group_statistics_admin_display() {
 	     */
 
 	    var labels = gnodes.append("text")
-		.text(function(d) { return d.label });
+		    .attr("dx", 18)
+		    .attr("dy", ".35em") 
+		    .text(function(d) { return d.label });
             
-            // draw the graph edges
-            var link = svg.selectAll("line.link")
-              .data(mydata.links)
-              .enter().append("line")
-              .style('stroke','black')
-	      .style("stroke-width", function(d) { return ( d.strength / 75 ); }); 
             
             // create the layout
             var force = d3.layout.force()
                 .charge(-220)
-                .linkDistance(90)
+                .linkDistance(500)
                 .size([width, height])
                 .nodes(mydata.nodes)
                 .links(mydata.links)
