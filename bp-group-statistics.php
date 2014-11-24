@@ -43,7 +43,7 @@ function bp_group_statistics_admin_display() {
 //$members = $members_array['members']; 
 
 	global $wpdb; 
-	$results = $wpdb->get_results( 'select t1.group_id as source, t2.group_id as target, count(t1.user_id) as strength from wp_bp_groups_members as t1, wp_bp_groups_members as t2 where t1.group_id < t2.group_id and t1.user_id = t2.user_id group by source, target order by strength desc limit 100' ); 
+	$results = $wpdb->get_results( 'select t1.group_id as source, t2.group_id as target, count(t1.user_id) as strength from wp_bp_groups_members as t1, wp_bp_groups_members as t2 where t1.group_id < t2.group_id and t1.user_id = t2.user_id group by source, target order by strength desc limit 200' ); 
 
 	//_log( 'here come some groups!' ); 
 	////_log( $results ); 
