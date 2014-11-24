@@ -19,16 +19,15 @@ add_action( 'admin_menu', 'my_plugin_admin_menu' );
 
 function bp_group_statistics_admin_init() {
 	/* Register our script. */
-	_log('attempting to register script at:');
-	_log(plugins_url( '/d3.js', __FILE__ )); 
 	wp_register_script( 'bp-group-stats-d3', plugins_url( '/d3.js', __FILE__ ) );
 } 
 add_action( 'admin_init', 'bp_group_statistics_admin_init' );
 
 function bp_group_statistics_enqueue_scripts() { 
 	/* Link our already registered script to a page */
-	_log('attempting to enqueue script now.');
 	wp_enqueue_script( 'bp-group-stats-d3' ); 
+	wp_register_style( 'bp-group-statistics', plugins_url( 'bp-group-statistics/assets/css/style.css' ) ); 
+	wp_enqueue_style( 'bp-group-statistics' ); 
 } 
 add_action( 'wp_enqueue_scripts', 'bp_group_statistics_enqueue_scripts' ); 
 
@@ -45,9 +44,9 @@ function bp_group_statistics_admin_display() {
 	global $wpdb; 
 	$results = $wpdb->get_results( 'select t1.group_id as source, t2.group_id as target, count(t1.user_id) as strength from wp_bp_groups_members as t1, wp_bp_groups_members as t2 where t1.group_id < t2.group_id and t1.user_id = t2.user_id group by source, target order by strength desc limit 400' ); 
 
-	_log( 'here come some groups!' ); 
+	//_log( 'here come some groups!' ); 
+	////_log( $results ); 
 	//_log( $results ); 
-	_log( $results ); 
 	$linked_groups = array(); 
 	foreach( $results as $result ) { 
 		if ( $result->strength > 2 ) { 
@@ -55,16 +54,22 @@ function bp_group_statistics_admin_display() {
 			$linked_groups[] = $result->target; 
 		} 
 	} 
-	_log( 'here are the linked groups raw:' ); 
-	_log( $linked_groups ); 
+	//_log( 'here are the linked groups raw:' ); 
+	//_log( $linked_groups ); 
 	$linked_groups_unique = array_unique($linked_groups); 
 	// now reindex it
 	$linked_groups_unique = array_values($linked_groups_unique); 
-	_log( 'here are the linked groups uniquej:' ); 
-	_log( $linked_groups_unique ); 
+	//_log( 'here are the linked groups uniquej:' ); 
+	//_log( $linked_groups_unique ); 
 	$nodes = array(); 
 	foreach( $linked_groups_unique as $linked_group ) { 
-		$nodes[] = array( 'name' => $linked_group ); 
+		$group = groups_get_group( array( 'group_id' => $linked_group ) ); 
+		//_log('here comes the group!'); 
+		//_log($group); 
+		$nodes[] = array( 
+			'name' => $linked_group, 
+			'label' => $group->name 
+		); 
 	} 
 	foreach( $results as $result ) { 
 		$result->source = array_search( $result->source, $linked_groups_unique ); 
@@ -116,26 +121,42 @@ function bp_group_statistics_admin_display() {
                 .attr('width', width)
                 .attr('height', height);
 
+	    var gnodes = svg.selectAll('g.gnode')
+		    .data(mydata.nodes)
+		    .enter()
+		    .append('g')
+		    .classed('gnode', true); 
+
+	    var node = gnodes.append("circle")
+		    .attr("class", "node")
+		    .attr('r', 5)
+		    .style('fill', 'red'); 
+
             // draw the graph nodes
-            var node = svg.selectAll("circle.node")
-              .data(mydata.nodes)
-              .enter()
-              .append("circle")
-                .attr("class", "node")
-		.style("fill", "red")
-                .attr("r", 12);
+	    /*
+             *var node = svg.selectAll("circle.node")
+             *  .data(mydata.nodes)
+             *  .enter()
+             *  .append("circle")
+             *    .attr("class", "node")
+	     *    .style("fill", "red")
+             *    .attr("r", 12); 
+	     */
+
+	    var labels = gnodes.append("text")
+		.text(function(d) { return d.label });
             
             // draw the graph edges
             var link = svg.selectAll("line.link")
               .data(mydata.links)
               .enter().append("line")
               .style('stroke','black')
-	      .style("stroke-width", function(d) { return ( d.strength / 100 ); }); 
+	      .style("stroke-width", function(d) { return ( d.strength / 75 ); }); 
             
             // create the layout
             var force = d3.layout.force()
                 .charge(-220)
-                .linkDistance(80)
+                .linkDistance(90)
                 .size([width, height])
                 .nodes(mydata.nodes)
                 .links(mydata.links)
@@ -148,12 +169,13 @@ function bp_group_statistics_admin_display() {
                     .attr("x2", function(d) { return d.target.x; })
                     .attr("y2", function(d) { return d.target.y; });
                 
-                node.attr("cx", function(d) { return d.x; })
-                    .attr("cy", function(d) { return d.y; });
+                //node.attr("cx", function(d) { return d.x; })
+                    //.attr("cy", function(d) { return d.y; });
+		gnodes.attr("transform", function(d) { return 'translate(' + [d.x, d.y] + ")"; }); 
                 });
 
             // bind the drag interaction to the nodes
-            node.call(force.drag);
+            gnodes.call(force.drag);
     </script>
 <?php 
 } 
